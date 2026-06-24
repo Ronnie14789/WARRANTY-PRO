@@ -88,7 +88,11 @@ function createApp({ store } = {}) {
 
       return notFound(res);
     } catch (error) {
-      return json(res, 400, { error: error.message });
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        process.stderr.write(`Request error: ${error.message}\n`);
+      }
+      return json(res, 400, { error: isProduction ? 'Request failed' : error.message });
     }
   });
 

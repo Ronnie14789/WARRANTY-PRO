@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DEFAULT_SECRET = 'local-dev-storage-secret-change-me';
+let hasLoggedDevSecretWarning = false;
 
 const CLAIM_STATUS = {
   OPEN: 'OPEN',
@@ -33,6 +34,16 @@ function calculateWarrantyStatus(endDate, referenceDate = new Date()) {
 
 class EncryptedJsonStore {
   constructor(filePath, secret = process.env.STORAGE_SECRET || DEFAULT_SECRET) {
+    if (process.env.NODE_ENV === 'production' && !process.env.STORAGE_SECRET) {
+      throw new Error('STORAGE_SECRET must be set in production');
+    }
+    if (secret === DEFAULT_SECRET && !hasLoggedDevSecretWarning) {
+      hasLoggedDevSecretWarning = true;
+      process.stderr.write(
+        'Warning: using development STORAGE_SECRET. Set STORAGE_SECRET for secure deployments.\n'
+      );
+    }
+
     this.filePath = filePath;
     this.secret = secret;
     this.state = {
