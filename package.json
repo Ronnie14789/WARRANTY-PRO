@@ -1,0 +1,19 @@
+{
+  "name": "warranty-pro",
+  "version": "1.0.0",
+  "description": "Warranty system API for registration, dashboard, reminders, and claims",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "lint": "node --check src/*.js test/*.js",
+    "build": "node --check src/*.js",
+    "test": "node --test",
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "warranty",
+    "api"
+  ],
+  "author": "",
+  "license": "ISC"
+}
