@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClaimStatus {
+  PENDING
+  UNDER_REVIEW
+  ADDITIONAL_INFORMATION_REQUIRED
+  APPROVED
+  REJECTED
+  INVESTIGATION_IN_PROGRESS
+  INVESTIGATION_COMPLETED
+  CLOSED
+}
+
+enum RootCauseCategory {
+  MANUFACTURING_DEFECT
+  MATERIAL_FAILURE
+  INSTALLATION_ERROR
+  MAINTENANCE_ISSUE
+  OPERATIONAL_MISUSE
+  UNKNOWN
+}
+
+enum AttachmentType {
+  PHOTO
+  VIDEO
+  DOCUMENT
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  fullName     String
+  passwordHash String
+  roleId       String
+  role         Role           @relation(fields: [roleId], references: [id])
+  createdClaims Claim[]       @relation("CreatedClaims")
+  assignedClaims Claim[]      @relation("AssignedClaims")
+  investigations Investigation[]
+  auditLogs    AuditLog[]
+  notifications Notification[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
+}
+
+model VehicleBrand {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  models    VehicleModel[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model VehicleModel {
+  id         String   @id @default(cuid())
+  name       String
+  year       Int
+  brandId    String
+  brand      VehicleBrand @relation(fields: [brandId], references: [id])
+  vehicles   Vehicle[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@unique([name, year, brandId])
+}
+
+model WarrantyPolicy {
+  id             String   @id @default(cuid())
+  name           String
+  durationMonths Int
+  mileageLimit   Int
+  terms          String
+  partCatalogs   PartCatalog[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PartCatalog {
+  id              String   @id @default(cuid())
+  partName         String
+  partNumber       String   @unique
+  description      String?
+  warrantyPolicyId String?
+  warrantyPolicy   WarrantyPolicy? @relation(fields: [warrantyPolicyId], references: [id])
+  claims           Claim[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Vehicle {
+  id                 String   @id @default(cuid())
+  registrationNumber String
+  vin                String   @unique
+  chassisNumber      String
+  engineNumber       String
+  modelId            String
+  model              VehicleModel @relation(fields: [modelId], references: [id])
+  mileage            Int
+  fleetOwner         String
+  driverName         String
+  driverContact      String
+  claims             Claim[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+}
+
+model Claim {
+  id                String       @id @default(cuid())
+  claimNumber       String       @unique
+  status            ClaimStatus  @default(PENDING)
+  createdById       String
+  createdBy         User         @relation("CreatedClaims", fields: [createdById], references: [id])
+  vehicleId         String
+  vehicle           Vehicle      @relation(fields: [vehicleId], references: [id])
+  failedPartId      String
+  failedPart        PartCatalog  @relation(fields: [failedPartId], references: [id])
+  failureDate       DateTime
+  failureLocation   String
+  breakdownLocation String
+  symptoms          String
+  incidentDescription String
+  assignedInvestigatorId String?
+  assignedInvestigator   User? @relation("AssignedClaims", fields: [assignedInvestigatorId], references: [id])
+  investigations    Investigation[]
+  correctiveActions CorrectiveAction[]
+  attachments       Attachment[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+}
+
+model Investigation {
+  id                 String   @id @default(cuid())
+  claimId            String
+  claim              Claim    @relation(fields: [claimId], references: [id])
+  inspectionDate     DateTime
+  inspectionLocation String
+  inspectorId        String
+  inspector          User     @relation(fields: [inspectorId], references: [id])
+  findings           Finding[]
+  rootCauseCategory  RootCauseCategory
+  rootCauseExplanation String
+  conclusion         String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+}
+
+model Finding {
+  id                 String   @id @default(cuid())
+  investigationId    String
+  investigation      Investigation @relation(fields: [investigationId], references: [id])
+  visualInspectionNotes String
+  measurements       String
+  wearPatternAnalysis String
+  damageDescription  String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+}
+
+model CorrectiveAction {
+  id                        String   @id @default(cuid())
+  claimId                   String
+  claim                     Claim    @relation(fields: [claimId], references: [id])
+  recommendedAction         String
+  repairMethod              String
+  replacementRecommendation String
+  preventiveMeasures        String
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  deletedAt                 DateTime?
+}
+
+model Attachment {
+  id          String         @id @default(cuid())
+  claimId     String
+  claim       Claim          @relation(fields: [claimId], references: [id])
+  type        AttachmentType
+  mimeType    String
+  fileName    String
+  storagePath String
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  claimId      String?
+  claim        Claim?   @relation(fields: [claimId], references: [id])
+  action       String
+  previousValue Json?
+  newValue      Json?
+  createdAt    DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  claimId   String?
+  claim     Claim?   @relation(fields: [claimId], references: [id])
+  subject   String
+  message   String
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+}
