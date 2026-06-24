@@ -46,6 +46,7 @@ class EncryptedJsonStore {
 
     this.filePath = filePath;
     this.secret = secret;
+    this.key = crypto.createHash('sha256').update(this.secret).digest();
     this.state = {
       entries: [],
       warranties: [],
@@ -55,7 +56,7 @@ class EncryptedJsonStore {
   }
 
   getKey() {
-    return crypto.createHash('sha256').update(this.secret).digest();
+    return this.key;
   }
 
   encrypt(plainText) {
