@@ -1,16 +1,24 @@
 import cors from 'cors';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import multer from 'multer';
 import { apiRouter } from './routes/index.js';
 import { errorHandler } from './middleware/error-handler.js';
 
 const upload = multer({ dest: 'uploads/' });
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 export const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
+app.use('/api', apiLimiter);
 
 app.post('/api/v1/claims/:id/attachments', upload.array('files', 20), (req, res) => {
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
